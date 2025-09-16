@@ -1,6 +1,7 @@
 import { Bot, Send, User, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
+import { processImageUrl } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -9,6 +10,13 @@ interface Message {
   timestamp: Date;
   recommendations?: MovieRecommendation[];
   youtubeVideos?: YouTubeVideo[];
+  isMovieCard?: boolean;
+  movieInfo?: {
+    title: string;
+    poster: string;
+    doubanLink: string;
+  };
+  hiddenContent?: string;
 }
 
 interface MovieRecommendation {
@@ -51,12 +59,62 @@ const AIChatModal = ({ isOpen, onClose }: AIChatModalProps) => {
   useEffect(() => {
     if (isOpen) {
       try {
+        // 首先检查是否有预设内容（优先级最高）
+        const presetContent = localStorage.getItem('ai-chat-preset');
+        if (presetContent) {
+          try {
+            const preset = JSON.parse(presetContent);
+            
+            // 模拟发送海报卡片消息
+            const movieCardMessage: Message = {
+              id: 'movie-card-' + Date.now(),
+              type: 'user',
+              content: `[发送了《${preset.title}》的海报卡片]`,
+              timestamp: new Date(),
+              isMovieCard: true,
+              movieInfo: {
+                title: preset.title,
+                poster: preset.poster,
+                doubanLink: preset.doubanLink
+              },
+              hiddenContent: preset.hiddenContent
+            };
+            
+            // AI预设回复
+            const aiReplyMessage: Message = {
+              id: 'ai-reply-' + Date.now(),
+              type: 'ai',
+              content: `你想了解《${preset.title}》的什么相关信息呢？`,
+              timestamp: new Date()
+            };
+            
+            setMessages([
+              {
+                id: '1',
+                type: 'ai',
+                content: '你好！我是AI推荐助手，可以根据你的喜好为你推荐精彩的影视作品和YouTube视频。\n\n如果你想看电影、电视剧、动漫等影视内容，我会为你推荐相关作品；\n如果你想看新闻、教程、解说、音乐等视频内容，我会为你推荐YouTube视频。\n\n请告诉我你想看什么类型的内容吧！',
+                timestamp: new Date()
+              },
+              movieCardMessage,
+              aiReplyMessage
+            ]);
+            
+            // 清除预设内容
+            localStorage.removeItem('ai-chat-preset');
+            return; // 有预设内容时不加载缓存消息
+          } catch (error) {
+            console.error('Failed to parse preset content:', error);
+          }
+        }
+        
+        // 没有预设内容时才加载缓存消息
         const cachedMessages = localStorage.getItem('ai-chat-messages');
         if (cachedMessages) {
           const { messages: storedMessages, timestamp } = JSON.parse(cachedMessages);
           const now = new Date().getTime();
           if (now - timestamp < 30 * 60 * 1000) {
             setMessages(storedMessages.map((msg: Message) => ({ ...msg, timestamp: new Date(msg.timestamp) })));
+            return;
           }
         }
       } catch (error) {
@@ -84,10 +142,19 @@ const AIChatModal = ({ isOpen, onClose }: AIChatModalProps) => {
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
+    // 检查最后一条消息是否是电影卡片消息，如果是则组合隐藏内容
+    const lastMessage = messages[messages.length - 1];
+    let actualContent = inputValue.trim();
+    
+    if (lastMessage && lastMessage.isMovieCard && lastMessage.hiddenContent) {
+      // 组合隐藏内容和用户输入
+      actualContent = `${lastMessage.hiddenContent}\n\n用户问题：${inputValue.trim()}`;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue.trim(),
+      content: inputValue.trim(), // 显示内容仍然是用户输入的内容
       timestamp: new Date()
     };
 
@@ -96,13 +163,20 @@ const AIChatModal = ({ isOpen, onClose }: AIChatModalProps) => {
     setInputValue('');
     setIsLoading(true);
 
-    const conversationHistory = updatedMessages.slice(-8);
+    // 构建对话历史，使用实际内容（包含隐藏内容）
+    const conversationHistory = updatedMessages.slice(-8).map(msg => {
+      if (msg === userMessage) {
+        // 对于刚发送的消息，使用包含隐藏内容的实际内容
+        return { role: msg.type, content: actualContent };
+      }
+      return { role: msg.type, content: msg.content };
+    });
 
     try {
       const response = await fetch('/api/ai/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: conversationHistory.map(m => ({ role: m.type, content: m.content })) })
+        body: JSON.stringify({ messages: conversationHistory })
       });
 
       if (!response.ok) throw new Error('推荐请求失败');
@@ -185,12 +259,50 @@ const AIChatModal = ({ isOpen, onClose }: AIChatModalProps) => {
                 <div className={`p-3 rounded-2xl ${message.type === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 </div>
+                {message.isMovieCard && message.movieInfo && (
+                  <div className="mt-3 p-3 glass-light rounded-lg border border-gray-200 dark:border-gray-600 self-stretch">
+                    <div className="flex items-start gap-3">
+                      <div className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0 overflow-hidden">
+                        <img 
+                          src={processImageUrl(message.movieInfo.poster)} 
+                          alt={message.movieInfo.title} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent && !parent.querySelector('.poster-placeholder')) {
+                              const placeholder = document.createElement('div');
+                              placeholder.className = 'poster-placeholder w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs';
+                              placeholder.textContent = '海报';
+                              parent.appendChild(placeholder);
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-2">{message.movieInfo.title}</h4>
+                        <a 
+                          href={message.movieInfo.doubanLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          查看详情
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {message.recommendations && message.recommendations.length > 0 && (
                   <div className="mt-3 space-y-2 self-stretch">
                     {message.recommendations.map((movie, index) => (
                       <div key={index} onClick={() => handleMovieSelect(movie)} className="p-3 glass-light rounded-lg cursor-pointer hover:shadow-md transition-all">
                         <div className="flex items-start gap-3">
-                          {movie.poster && <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded flex-shrink-0" />}
+                          {movie.poster && <img src={processImageUrl(movie.poster)} alt={movie.title} className="w-12 h-16 object-cover rounded flex-shrink-0" />}
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-gray-900 dark:text-white text-sm">{movie.title}{movie.year && <span className="text-gray-500 dark:text-gray-400 ml-1">({movie.year})</span>}</h4>
                             {movie.genre && <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{movie.genre}</p>}

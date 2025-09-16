@@ -1410,8 +1410,8 @@ function LivePageClient() {
                     onClick={() => setActiveTab('channels')}
                     className={`flex-1 py-3 px-6 text-center cursor-pointer transition-all duration-200 font-medium
                       ${activeTab === 'channels'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-gray-700 hover:text-green-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-green-400 hover:bg-black/3 dark:hover:bg-white/3'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 hover:text-blue-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-blue-400 hover:bg-black/3 dark:hover:bg-white/3'
                       }
                     `.trim()}
                   >
@@ -1421,8 +1421,8 @@ function LivePageClient() {
                     onClick={() => setActiveTab('sources')}
                     className={`flex-1 py-3 px-6 text-center cursor-pointer transition-all duration-200 font-medium
                       ${activeTab === 'sources'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-gray-700 hover:text-green-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-green-400 hover:bg-black/3 dark:hover:bg-white/3'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 hover:text-blue-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-blue-400 hover:bg-black/3 dark:hover:bg-white/3'
                       }
                     `.trim()}
                   >
@@ -1509,8 +1509,8 @@ function LivePageClient() {
                                  ${isSwitchingSource
                                       ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
                                       : selectedGroup === group
-                                        ? 'text-green-500 dark:text-green-400'
-                                        : 'text-gray-700 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400'
+                                        ? 'text-blue-500 dark:text-blue-400'
+                                        : 'text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400'
                                     }
                                `.trim()}
                                 >
@@ -1540,7 +1540,7 @@ function LivePageClient() {
                                   className={`w-full p-3 rounded-lg text-left transition-all duration-200 ${isSwitchingSource
                                     ? 'opacity-50 cursor-not-allowed'
                                     : isActive
-                                      ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
+                                      ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
                                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                                     }`}
                                 >

@@ -14,6 +14,13 @@ interface Message {
   timestamp: Date;
   recommendations?: MovieRecommendation[];
   youtubeVideos?: YouTubeVideo[];
+  isMovieCard?: boolean;
+  movieInfo?: {
+    title: string;
+    poster: string;
+    doubanLink: string;
+  };
+  hiddenContent?: string;
 }
 
 interface MovieRecommendation {
@@ -51,6 +58,49 @@ const AIChatPage = () => {
 
   useEffect(() => {
     try {
+      // 检查是否有预设的剧名内容
+      const presetContent = localStorage.getItem('ai-chat-preset');
+      if (presetContent) {
+        const { title, poster, doubanLink, hiddenContent, timestamp } = JSON.parse(presetContent);
+        const now = Date.now();
+        // 5分钟内有效
+        if (now - timestamp < 5 * 60 * 1000) {
+          // 清除预设内容
+          localStorage.removeItem('ai-chat-preset');
+          
+          // 模拟发送海报卡片消息
+          const movieCardMessage: Message = {
+            id: Date.now().toString(),
+            type: 'user',
+            content: `[发送了《${title}》的海报卡片]`,
+            timestamp: new Date(),
+            isMovieCard: true,
+            movieInfo: {
+              title,
+              poster,
+              doubanLink
+            },
+            hiddenContent
+          };
+          
+          // AI预设回复
+          const aiPresetReply: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai',
+            content: `你想了解《${title}》的什么相关信息呢？`,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, movieCardMessage, aiPresetReply]);
+          
+          return; // 如果有预设内容，不加载缓存消息
+        } else {
+          // 过期的预设内容，清除
+          localStorage.removeItem('ai-chat-preset');
+        }
+      }
+      
+      // 加载缓存消息
       const cachedMessages = localStorage.getItem('ai-chat-messages');
       if (cachedMessages) {
         const { messages: storedMessages, timestamp } = JSON.parse(cachedMessages);
@@ -85,13 +135,67 @@ const AIChatPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleAutoSendMessage = async (messagesWithPreset: Message[]) => {
+    const conversationHistory = messagesWithPreset.slice(-8);
+
+    try {
+      const response = await fetch('/api/ai/recommend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: conversationHistory.map(m => ({ role: m.type, content: m.content }))
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('推荐请求失败');
+      }
+
+      const data = await response.json();
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: data.content || '抱歉，我现在无法为你推荐内容，请稍后再试。',
+        timestamp: new Date(),
+        recommendations: data.recommendations || [],
+        youtubeVideos: data.youtubeVideos || []
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('AI推荐失败:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: '抱歉，网络连接出现问题，请检查网络后重试。如果问题持续存在，请稍后再试。',
+        timestamp: new Date(),
+        recommendations: [],
+        youtubeVideos: []
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
+
+    // 检查是否有隐藏内容需要组合
+    const lastMovieCard = messages.slice().reverse().find(msg => msg.isMovieCard && msg.hiddenContent);
+    let actualContent = inputValue.trim();
+    
+    if (lastMovieCard && lastMovieCard.hiddenContent) {
+      // 组合隐藏内容和用户输入
+      actualContent = lastMovieCard.hiddenContent + actualContent;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue.trim(),
+      content: inputValue.trim(), // 显示给用户的是原始输入
       timestamp: new Date()
     };
 
@@ -102,6 +206,14 @@ const AIChatPage = () => {
 
     // Keep the last 4 rounds of conversation (4 user + 4 AI messages = 8 total)
     const conversationHistory = updatedMessages.slice(-8);
+    
+    // 将最后一条消息的内容替换为实际发送给AI的内容（包含隐藏内容）
+    if (conversationHistory.length > 0) {
+      conversationHistory[conversationHistory.length - 1] = {
+        ...conversationHistory[conversationHistory.length - 1],
+        content: actualContent
+      };
+    }
 
     try {
       const response = await fetch('/api/ai/recommend', {
@@ -185,6 +297,39 @@ const AIChatPage = () => {
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 </div>
+
+                {/* 海报卡片显示 */}
+                {message.isMovieCard && message.movieInfo && (
+                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg max-w-xs">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={message.movieInfo.poster}
+                        alt={message.movieInfo.title}
+                        className="w-16 h-20 object-cover rounded flex-shrink-0"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
+                          {message.movieInfo.title}
+                        </h4>
+                        {message.movieInfo.doubanLink && (
+                          <a
+                            href={message.movieInfo.doubanLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            查看豆瓣详情
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* 推荐影片卡片 */}
                 {message.recommendations && message.recommendations.length > 0 && (

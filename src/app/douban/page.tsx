@@ -75,7 +75,7 @@ function DoubanPageClient() {
     year: 'all',
     platform: 'all',
     label: 'all',
-    sort: 'T',
+    sort: 'U',
   });
 
   // 星期选择器状态
@@ -161,7 +161,7 @@ function DoubanPageClient() {
         setPrimarySelection('最近热门');
         setSecondarySelection('show');
       } else if (type === 'anime') {
-        setPrimarySelection('每日放送');
+        setPrimarySelection('番剧');
         setSecondarySelection('全部');
       } else if (type === 'short-drama') {
         setPrimarySelection('热门');
@@ -179,7 +179,7 @@ function DoubanPageClient() {
       year: 'all',
       platform: 'all',
       label: 'all',
-      sort: 'T',
+      sort: 'U',
     });
 
     // 使用短暂延迟确保状态更新完成后标记选择器准备好
@@ -647,7 +647,7 @@ function DoubanPageClient() {
           year: 'all',
           platform: 'all',
           label: 'all',
-          sort: 'T',
+          sort: 'U',
         });
 
         // 如果是自定义分类模式，同时更新一级和二级选择器

@@ -466,7 +466,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
             <div className='overflow-x-auto'>
               {renderCapsuleSelector(
                 animePrimaryOptions,
-                primarySelection || animePrimaryOptions[0].value,
+                primarySelection || animePrimaryOptions[1].value,
                 onPrimaryChange,
                 true
               )}
@@ -474,7 +474,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
           </div>
 
           {/* 筛选部分 - 根据一级选择器显示不同内容 */}
-          {(primarySelection || animePrimaryOptions[0].value) === '每日放送' ? (
+          {(primarySelection || animePrimaryOptions[1].value) === '每日放送' ? (
             // 每日放送分类下显示星期选择器
             <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
               <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
@@ -491,7 +491,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
                 筛选
               </span>
               <div className='overflow-x-auto'>
-                {(primarySelection || animePrimaryOptions[0].value) ===
+                {(primarySelection || animePrimaryOptions[1].value) ===
                   '番剧' ? (
                   <MultiLevelSelector
                     key={`anime-tv-${primarySelection}`}
