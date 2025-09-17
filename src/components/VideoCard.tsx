@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,react-hooks/exhaustive-deps,@typescript-eslint/no-empty-function */
 
-import { ExternalLink, Heart, Link, PlayCircleIcon, Radio, Trash2 } from 'lucide-react';
+import { Bot, ExternalLink, Heart, Link, PlayCircleIcon, Radio, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, {
@@ -628,8 +628,46 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         onClick: handleClick,
         color: 'primary' as const,
       });
+    }
 
-      // 新标签页播放
+    // 问问AI操作 - 替换豆瓣详情页
+    actions.push({
+      id: 'ai-chat',
+      label: '问问AI',
+      icon: <Bot size={20} />,
+      onClick: () => {
+        // 清除之前的聊天缓存，确保每次都显示新的剧信息
+        localStorage.removeItem('ai-chat-messages');
+
+        // 构建豆瓣链接
+        const doubanLink = actualDoubanId && actualDoubanId !== 0
+          ? (isBangumi
+            ? `https://bgm.tv/subject/${actualDoubanId}`
+            : `https://movie.douban.com/subject/${actualDoubanId}`)
+          : '';
+
+        // 存储剧名、海报和豆瓣链接信息到localStorage
+        const presetContent = {
+          title: actualTitle,
+          poster: processImageUrl(actualPoster),
+          doubanLink: doubanLink,
+          hiddenContent: `这部剧的名字叫《${actualTitle}》，这部剧豆瓣链接地址：${doubanLink}\n`,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('ai-chat-preset', JSON.stringify(presetContent));
+
+        // PC端打开模态框，移动端跳转页面
+        if (isDesktop) {
+          setIsAIChatModalOpen(true);
+        } else {
+          router.push('/ai-chat');
+        }
+      },
+      color: 'default' as const,
+    });
+
+    // 新标签页播放
+    if (config.showPlayButton) {
       actions.push({
         id: 'play-new-tab',
         label: origin === 'live' ? '新标签页观看' : '新标签页播放',
@@ -715,22 +753,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       });
     }
 
-    // 豆瓣链接操作
-    if (config.showDoubanLink && actualDoubanId && actualDoubanId !== 0) {
-      actions.push({
-        id: 'douban',
-        label: isBangumi ? 'Bangumi 详情' : '豆瓣详情',
-        icon: <Link size={20} />,
-        onClick: () => {
-          const url = isBangumi
-            ? `https://bgm.tv/subject/${actualDoubanId.toString()}`
-            : `https://movie.douban.com/subject/${actualDoubanId.toString()}`;
-          window.open(url, '_blank', 'noopener,noreferrer');
-        },
-        color: 'default' as const,
-      });
-    }
-
     return actions;
   }, [
     config,
@@ -743,9 +765,18 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     isBangumi,
     isAggregate,
     dynamicSourceNames,
+    actualTitle,
+    actualPoster,
+    actualYear,
+    type,
     handleClick,
     handleToggleFavorite,
     handleDeleteRecord,
+    handlePlayInNewTab,
+    isDesktop,
+    setIsAIChatModalOpen,
+    router,
+    origin,
   ]);
 
   return (

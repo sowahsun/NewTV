@@ -256,11 +256,8 @@ const AIChatModal = ({ isOpen, onClose }: AIChatModalProps) => {
                 </div>
               )}
               <div className={`flex flex-col max-w-[80%] ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`p-3 rounded-2xl ${message.type === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                </div>
                 {message.isMovieCard && message.movieInfo && (
-                  <div className="mt-3 p-3 glass-light rounded-lg border border-gray-200 dark:border-gray-600 self-stretch">
+                  <div className="mb-3 p-3 glass-light rounded-lg border border-gray-200 dark:border-gray-600 self-stretch">
                     <div className="flex items-start gap-3">
                       <div className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0 overflow-hidden">
                         <img 
@@ -297,6 +294,9 @@ const AIChatModal = ({ isOpen, onClose }: AIChatModalProps) => {
                     </div>
                   </div>
                 )}
+                <div className={`p-3 rounded-2xl ${message.type === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                </div>
                 {message.recommendations && message.recommendations.length > 0 && (
                   <div className="mt-3 space-y-2 self-stretch">
                     {message.recommendations.map((movie, index) => (

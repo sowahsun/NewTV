@@ -1442,7 +1442,7 @@ function LivePageClient() {
                           placeholder='搜索频道...'
                           value={searchQuery}
                           onChange={(e) => handleSearchChange(e.target.value)}
-                          className='w-full pl-10 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent'
+                          className='w-full pl-10 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         />
                         {searchQuery && (
                           <button

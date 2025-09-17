@@ -508,7 +508,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                 <div className='text-center'>
                   <div className='text-gray-400 text-2xl mb-2'>📺</div>
                   <p className='text-sm text-gray-600 dark:text-gray-300'>
-                    暂无可用的换源,尝试加载更多中··
+                    正在扩大搜索,尝试加载更多有效源中···
                   </p>
                 </div>
               </div>
@@ -599,7 +599,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                                   const textColorClasses = isUltraHigh
                                     ? 'text-purple-600 dark:text-purple-400'
                                     : isHigh
-                                      ? 'text-green-600 dark:text-green-400'
+                                      ? 'text-blue-600 dark:text-blue-400'
                                       : 'text-yellow-600 dark:text-yellow-400';
 
                                   return (

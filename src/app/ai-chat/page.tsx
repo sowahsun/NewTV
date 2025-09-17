@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
 import PageLayout from '@/components/PageLayout';
+import { processImageUrl } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -183,19 +184,19 @@ const AIChatPage = () => {
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    // 检查是否有隐藏内容需要组合
-    const lastMovieCard = messages.slice().reverse().find(msg => msg.isMovieCard && msg.hiddenContent);
+    // 检查最后一条消息是否是电影卡片消息，如果是则组合隐藏内容
+    const lastMessage = messages[messages.length - 1];
     let actualContent = inputValue.trim();
     
-    if (lastMovieCard && lastMovieCard.hiddenContent) {
+    if (lastMessage && lastMessage.isMovieCard && lastMessage.hiddenContent) {
       // 组合隐藏内容和用户输入
-      actualContent = lastMovieCard.hiddenContent + actualContent;
+      actualContent = `${lastMessage.hiddenContent}\n\n用户问题：${inputValue.trim()}`;
     }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue.trim(), // 显示给用户的是原始输入
+      content: inputValue.trim(), // 显示内容仍然是用户输入的内容
       timestamp: new Date()
     };
 
@@ -204,16 +205,14 @@ const AIChatPage = () => {
     setInputValue('');
     setIsLoading(true);
 
-    // Keep the last 4 rounds of conversation (4 user + 4 AI messages = 8 total)
-    const conversationHistory = updatedMessages.slice(-8);
-    
-    // 将最后一条消息的内容替换为实际发送给AI的内容（包含隐藏内容）
-    if (conversationHistory.length > 0) {
-      conversationHistory[conversationHistory.length - 1] = {
-        ...conversationHistory[conversationHistory.length - 1],
-        content: actualContent
-      };
-    }
+    // 构建对话历史，使用实际内容（包含隐藏内容）
+    const conversationHistory = updatedMessages.slice(-8).map(msg => {
+      if (msg === userMessage) {
+        // 对于刚发送的消息，使用包含隐藏内容的实际内容
+        return { role: msg.type, content: actualContent };
+      }
+      return { role: msg.type, content: msg.content };
+    });
 
     try {
       const response = await fetch('/api/ai/recommend', {
@@ -222,7 +221,7 @@ const AIChatPage = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          messages: conversationHistory.map(m => ({ role: m.type, content: m.content }))
+          messages: conversationHistory
         })
       });
 
@@ -289,28 +288,28 @@ const AIChatPage = () => {
                 </div>
               )}
               <div className={`flex flex-col max-w-[80%] ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
-                <div
-                  className={`p-3 rounded-2xl ${message.type === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
-                    }`}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                </div>
-
                 {/* 海报卡片显示 */}
                 {message.isMovieCard && message.movieInfo && (
-                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg max-w-xs">
+                  <div className="mb-2 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg max-w-xs">
                     <div className="flex items-start gap-3">
-                      <img
-                        src={message.movieInfo.poster}
-                        alt={message.movieInfo.title}
-                        className="w-16 h-20 object-cover rounded flex-shrink-0"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                      />
+                      <div className="w-16 h-20 bg-gray-200 dark:bg-gray-600 rounded flex-shrink-0 overflow-hidden">
+                        <img
+                          src={processImageUrl(message.movieInfo.poster)}
+                          alt={message.movieInfo.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent && !parent.querySelector('.poster-placeholder')) {
+                              const placeholder = document.createElement('div');
+                              placeholder.className = 'poster-placeholder w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs';
+                              placeholder.textContent = '海报';
+                              parent.appendChild(placeholder);
+                            }
+                          }}
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
                           {message.movieInfo.title}
@@ -330,6 +329,14 @@ const AIChatPage = () => {
                     </div>
                   </div>
                 )}
+                <div
+                  className={`p-3 rounded-2xl ${message.type === 'user'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
+                    }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                </div>
 
                 {/* 推荐影片卡片 */}
                 {message.recommendations && message.recommendations.length > 0 && (
@@ -342,11 +349,24 @@ const AIChatPage = () => {
                       >
                         <div className="flex items-start gap-3">
                           {movie.poster && (
-                            <img
-                              src={movie.poster}
-                              alt={movie.title}
-                              className="w-12 h-16 object-cover rounded flex-shrink-0"
-                            />
+                            <div className="w-12 h-16 bg-gray-200 dark:bg-gray-600 rounded flex-shrink-0 overflow-hidden">
+                              <img
+                                src={processImageUrl(movie.poster)}
+                                alt={movie.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent && !parent.querySelector('.poster-placeholder')) {
+                                    const placeholder = document.createElement('div');
+                                    placeholder.className = 'poster-placeholder w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs';
+                                    placeholder.textContent = '海报';
+                                    parent.appendChild(placeholder);
+                                  }
+                                }}
+                              />
+                            </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-gray-900 dark:text-white text-sm">
