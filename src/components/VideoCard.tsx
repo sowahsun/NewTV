@@ -278,10 +278,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       clearTimeout(hoverTimerRef.current);
     }
 
-    // 设置2秒定时器
+    // 设置0.5秒定时器
     hoverTimerRef.current = setTimeout(() => {
       setShowAIButton(true);
-    }, 2000);
+    }, 500);
   }, [from]);
 
   const handleMouseLeave = useCallback(() => {

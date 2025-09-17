@@ -43,6 +43,7 @@ const Logo = () => {
 
 interface SidebarProps {
   onToggle?: (collapsed: boolean) => void;
+  defaultCollapsed?: boolean;
 }
 
 // 在浏览器环境下通过全局变量缓存折叠状态，避免组件重新挂载时出现初始值闪烁
@@ -52,7 +53,7 @@ declare global {
   }
 }
 
-const Sidebar = ({ onToggle }: SidebarProps) => {
+const Sidebar = ({ onToggle, defaultCollapsed }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -64,7 +65,7 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
     ) {
       return window.__sidebarCollapsed;
     }
-    return false; // 默认展开
+    return defaultCollapsed ?? false; // 使用传入的默认值，否则默认展开
   });
 
   // 首次挂载时读取 localStorage，以便刷新后仍保持上次的折叠状态
@@ -74,8 +75,12 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
       const val = JSON.parse(saved);
       setIsCollapsed(val);
       window.__sidebarCollapsed = val;
+    } else if (defaultCollapsed !== undefined) {
+      // 如果没有保存的状态，但有默认值，则使用默认值
+      setIsCollapsed(defaultCollapsed);
+      window.__sidebarCollapsed = defaultCollapsed;
     }
-  }, []);
+  }, [defaultCollapsed]);
 
   // 当折叠状态变化时，同步到 <html> data 属性，供首屏 CSS 使用
   useLayoutEffect(() => {
